@@ -1,8 +1,13 @@
-.PHONY: clean
+.PHONY: build restore clean main 
 
-main:
-	# Compiling the compiler :)
-
+main:| clean restore build
+	
 clean:
-	rm -rf build/*
-
+	dotnet clean NetCoreCompiler/NetCoreCompiler/ 
+ 
+restore:
+	dotnet restore NetCoreCompiler/NetCoreCompiler/
+ 
+build:
+	dotnet build NetCoreCompiler/NetCoreCompiler/
+ 

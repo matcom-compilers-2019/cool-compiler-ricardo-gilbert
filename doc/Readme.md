@@ -1,35 +1,62 @@
-# Documentación
+# Reporte del compilador
 
-> Introduzca sus datos (de todo el equipo) en la siguiente tabla:
 
-**Nombre** | **Grupo** | **Github**
---|--|--
-Nombre1 Apellido1 Apellido2 | C4xx | [@github_user](https://github.com/<user>)
-Nombre2 Apellido1 Apellido2 | C4xx | [@github_user](https://github.com/<user>)
-Nombre3 Apellido1 Apellido2 | C4xx | [@github_user](https://github.com/<user>)
+Ricardo Ivan Valdes Rodriguez | C411 | [@RiiVa](https://github.com/RiiVa)
+Gilbert Rafael Garcia Cabrear | C412 | [@GRGarcia066](https://github.com/GRGarcia066)
 
-## Readme
+## Arquitectura del compilador
 
-Modifique el contenido documento para documentar de forma clara y concisa los siguientes aspectos:
+###Lexer y Parser
 
-- Cómo ejecutar (y compilar si es necesario) su compilador.
-- Requisitos adicionales, dependencias, configuración, etc.
-- Opciones adicionales que tenga su compilador.
+Para la implementacion del Lexer y Parser se utilizo la herramienta ANTLR4 donde a partir de la gramatica `Cool.g4` se generaron los tokens y donde despues usariamos el AST generado por ANTLR4 se encuentra en `CoolParser.cs`. Cabe destacar que ANTLR4 trata la recursion izquierda por nosotros eliminando la ambiguedad de esta y establece el orden de las operaciones acorde del orden en que definimos las porducciones para cada no terminal.
 
-## Reporte escrito
+###ContextAST a AST
 
-En esta carpeta ponga además su reporte escrito. Ya sea hecho en LaTeX, Markdown o Word, **además** genere un PDF y póngale nombre `report.pdf`.
+En esta parte definimos nuestro propio AST para mas comodidad a la hora de recorrer el arbol para el chequeo semantico y la generacion CIL, entonces en esta parte solo recorremos el AST creado por el ANTLR4 y lo convertimos en el nuestro. 
 
-El reporte debe resumir de manera organizada y comprensible la arquitectura e implementación de su compilador.
-El documento **NO** debe exceder las 5 cuartillas.
-En él explicará en más detalle su solución a los problemas que, durante la implementación de cada una de las fases del proceso de compilación, hayan requerido de Ud. especial atención.
+###Chequeo semantico
 
-El informe debe incluir además una dirección a un repositorio git público con el código fuente de su compilador. Para la evaluación del proyecto, se clonará el repositorio y se procederá a su revisión. El proyecto debe contener un fichero `README.md` con las indicaciones para ejecutar su compilador, y los mecanismos pertinentes para garantizar su correcto funcionamiento en la máquina del revisor (instalación de dependencias, etc.).
+Despues de tener nuestro AST armado vendria el chequeo semantico donde recorremos nuestro AST 2 veces, antes ordenamos las clases por orden topologico y revisamos los casos de herencia ciclica o clases repetidas.
 
-### Estructura del reporte
+1- La primera pasada recorremos cada clase capturando la definicion de los tipos, las propiedades y los metodos para cada clase, ademas de ir añadiendo al scope la herencia, para despues saber los metodos del padre para cada clase.
+2- Analizamos las expresiones definidas en el cuerpo de los metodos y las inicializaciones de las propiedades, analizando el tipo estatico de cada metodo y atributo y analizando cada uno de los distintos expression definidos en la gramatica.
 
-Usted es libre de estructurar su reporte escrito como más conveniente le parezca. A continuación le sugerimos algunas secciones que no deberían faltar, aunque puede mezclar, renombrar y organizarlas de la manera que mejor le parezca:
+Se implemeto IScope para atrapar los `tipos`, los `metodos` y `propiedades` por cada uno, los `parametros` para cada uno de los metodos ademas de tener funcionalidades que nos seran de gran ayuda como saber si un tipo o metodo esta definido entre otras cosas.
 
-- **Uso del compilador**: detalles sobre las opciones de líneas de comando, si tiene opciones adicionales (e.j., `--ast` genera un AST en JSON, etc.). Básicamente lo mismo que pondrá en este Readme.
-- **Arquitectura del compilador**: una explicación general de la arquitectura, en cuántos módulos se divide el proyecto, cuantas fases tiene, qué tipo de gramática se utiliza, y en general, como se organiza el proyecto. Una buena imagen siempre ayuda.
-- **Problemas técnicos**: detalles sobre cualquier problema teórico o técnico interesante que haya necesitado resolver de forma particular.
+
+##Generacion de codigo
+
+###Generacion del AST a CIL
+
+En esta parte se hacen dos pasadas:
+1- Para almacenar las clases basicas y las posibles nuevas definidas por el programador y diefinir los metodos que tiene cada clases en orden topologico de forma que cada vez que se define una clase nueva esta tambien almacena los metodos de la clase que hereda.
+2- Para generar el codigo de las `direcciones` de las funciones.
+
+###Generacion de CIL a MIPS
+El programa en mips se divide en 2 secciones fundamentales:
+.data en la cual van las definiciones de tipos, excepciones , strings, y la herencia
+
+.text que contiene todo el codigo del programa, empezando por los constructores de los tipos basicos y sus funciones, despues un main que es donde comienza el codigo a generar.
+La estructura de las clases en mips es:
+Nombre de la clase,
+Tamaño de la clase,
+nombre de la clases de la que hereda,
+puntero a la definicion de la funcion por cada una de las funciones 
+
+### Compilando proyecto
+
+```bash
+$ cd src
+$ make
+```
+
+### Ejecutando proyecto
+
+Para lanzar el compilador, se ejecutará la siguiente instrucción:
+
+```bash
+$ cd src
+$ ./coolc.sh <input_file.cl>
+```
+
+El cual genera el un `<nombre>.asm` listo para correr en spim ;)
